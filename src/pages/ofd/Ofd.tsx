@@ -5,7 +5,7 @@ import {
   isValidConnection,
   setEdgeProperties,
 } from "@/utils";
-import { ObjectProperties } from "@/utils/types.js";
+import { IoSpec, NodeCatalogEntry, ObjectProperties } from "@/utils/types.js";
 import axios from "axios";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -33,8 +33,8 @@ import styles from "./ofd.module.scss";
 import { randomizeValue, captureCursorPosition } from "../../helpers/helper";
 import { useToast } from "@/hooks/useToast";
 import ActionToolbar from "@/components/ActionToolbar/ActionToolbar";
-import ConnectionLine from '@/components/ConnectionLine/ConnectionLine';
-import useOfdStore from '@/store/ofdStore';
+import ConnectionLine from "@/components/ConnectionLine/ConnectionLine";
+import useOfdStore from "@/store/ofdStore";
 import userPreferencesStore from "@/store/userPreferencesStore"; // Import the Zustand store
 
 const edgeTypes = {
@@ -59,7 +59,6 @@ interface ForceGraphProps {
   description?: string;
   graphName: string;
   initEdges?: Edge[];
-  initNodes?: Node[];
   isEditable?: boolean;
   isDraftInitial?: boolean;
 }
@@ -70,20 +69,17 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
   author,
   graphName,
   initEdges,
-  initNodes,
   isEditable = true,
   isDraftInitial = true,
 }) => {
   const reactFlowWrapper = useRef(null);
   //@ts-ignore
-  const [nodes, setNodes, onNodesChange] = useNodesState();
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { showToast } = useToast();
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const selectedNode = useOfdStore((state) => state.selectedNode);
   const setSelectedNode = useOfdStore((state) => state.setSelectedNode);
-  const [isPendingClassDetailsAction, setIsPendingClassDetailsAction] =
-    useState(false);
   const [highlightedClass, setHighlightedClass] = useState<{
     label: string;
     type: string;
@@ -92,15 +88,14 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     type: "",
   });
   const router = useRouter();
-  const [dropInfo, setDropInfo] = useState(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [droppedClassName, setDroppedClassName] = useState<null | string>(null);
-  // Store
   const setupMode = useOfdStore((state) => state.setupMode);
   const setSetupMode = useOfdStore((state) => state.setSetupMode);
   const addConnectedEdges = useOfdStore((state) => state.addConnectedEdges);
   const clearConnectedEdges = useOfdStore((state) => state.clearConnectedEdges);
-  const doubleClickToEnterSetupMode = userPreferencesStore((state) => state.doubleClickToEnterSetupMode);
+  const doubleClickToEnterSetupMode = userPreferencesStore(
+    (state) => state.doubleClickToEnterSetupMode
+  );
   const isGraphEditable = useOfdStore((state) => state.isGraphEditable);
   const setIsGraphEditable = useOfdStore((state) => state.setIsGraphEditable);
 
@@ -114,26 +109,14 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     y: 0,
   });
   const [isDraft, setIsDraft] = useState<boolean>(isDraftInitial);
-  const {
-    data: classDetails,
-    isLoading: isClassDetailsLoading,
-    isError: isClassDetailsError,
-  } = useQuery(
-    ["classDetails", droppedClassName],
-    () =>
-      axios
-        .get(`${apiBaseUrl}/api/parse-ttl/?className=${droppedClassName}`)
-        .then((res) => res.data)
-        .catch((res) => {
-          showToast("error", "Error", res.response.data.error);
-        }),
-    {
-      enabled: !!droppedClassName, // only fetch when selectedClassName is not null
-      staleTime: 1000 * 60 * 10, // 10 minutes
-      cacheTime: 1000 * 60 * 30, // 30 minutes
-    }
-  );
+  const [nodeCatalog, setNodeCatalog] = useState<NodeCatalogEntry[]>([]);
 
+  useEffect(() => {
+    fetch("http://localhost:3000/api/catalog/nodes")
+      .then((res) => res.json())
+      .then((data: NodeCatalogEntry[]) => setNodeCatalog(data))
+      .catch(() => console.error("Failed to load catalog"));
+  }, []);
   const resetEdgeSelection = () => {
     setConnectionParams(null);
     setEdgeSelections([]);
@@ -282,9 +265,6 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
 
   const addToGraph = () => {
     if (!isEditable) return;
-    const cleanedType = highlightedClass.label.replace(/\s+/g, "");
-    setDroppedClassName(cleanedType);
-    // Get the bounding box of the graph area
     const { width, height } = reactFlowWrapper.current.getBoundingClientRect();
     const viewport = reactFlowInstance.getViewport();
     const { x, y, zoom } = viewport;
@@ -293,13 +273,6 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
       y: randomizeValue((height / 2 - y) / zoom),
     };
 
-    // Store event-related data for later use
-    setDropInfo({
-      type: highlightedClass.label,
-      position: position,
-    });
-
-    setIsPendingClassDetailsAction(true);
     setHighlightedClass({ label: "", type: "" });
   };
 
@@ -317,82 +290,50 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
         return;
       }
       event.preventDefault();
+
+      // 1. Pull the node-type string from the drag data
       const type = event.dataTransfer.getData("application/reactflow");
-      if (typeof type === "undefined" || !type) {
+      if (!type) {
         return;
       }
-      const cleanedType = type.replace(/\s+/g, "");
-      setDroppedClassName(cleanedType);
 
+      // 2. Convert screen coords to React Flow coords
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      // Store event-related data for later use
-      setDropInfo({
-        type: type,
-        position,
-      });
+      // 3. Find the catalog entry for this type
+      const catalogEntry = nodeCatalog.find((n) => n.type === type);
+      if (!catalogEntry) {
+        console.warn(`Dropped unknown node type: ${type}`);
+        return;
+      }
+      const nodeTypeVisual = (io: IoSpec) => {
+        if (io && io.in === undefined && io.out) {
+          return "input"; // source node
+        }
 
-      setIsPendingClassDetailsAction(true);
-    },
-    [reactFlowInstance]
-  );
+        if (io && io.in && io.out === undefined) {
+          return "output"; // sink node
+        }
 
-  useEffect(() => {
-    if (initNodes && initNodes.length > 0) {
-      setNodes(initNodes);
-    }
-    if (initEdges && initEdges.length >= 0) {
-      setEdges(initEdges);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (classDetails && isPendingClassDetailsAction && dropInfo) {
-      setIsPendingClassDetailsAction(false);
-
-      // Access stored event data
-      const { type, position } = dropInfo;
-
-      const newNode = {
-        id: generateClassId(),
-        type: type === "Task" ? "input" : "default",
-        position,
-        sourcePosition: "right",
-        targetPosition: "left",
-        data: {
-          label: type,
-          formData: classDetails,
-        },
+        return "default"; // tr
       };
-
-      // Assuming setNodes updates your component state
-      //@ts-ignore
+      // 4. Build a new Node object
+      const newNode: Node = {
+        id: generateClassId(),
+        type: nodeTypeVisual(catalogEntry.io), // or use a custom nodeType if you have one per catalogEntry
+        position,
+        data: { ...catalogEntry },
+      };
+      console.log(nodes, "nodes");
+      // 5. Append it to your nodes state
       setNodes((nds) => nds.concat(newNode));
-
-      // Clear dropInfo if necessary
-      setDropInfo(null);
-    }
-  }, [classDetails, isPendingClassDetailsAction, dropInfo]);
-
-  const { data: classes, isLoading } = useQuery(
-    "classes",
-    () =>
-      axios
-        .get(`${apiBaseUrl}/api/classes`)
-        .then((res) => [
-          { uri: "", className: "Task", parentClassUri: "" },
-          ...res.data,
-        ])
-        .catch(() => {
-          showToast("error", "Error", "Could not fetch classes from Stardog");
-        }),
-    {
-      staleTime: Infinity,
-    }
+    },
+    [reactFlowInstance, isEditable, nodeCatalog, setNodes]
   );
+  console.log(nodes, "nodes");
 
   function handleClassOnDrag(e: React.DragEvent, nodeType: any) {
     e.dataTransfer.setData("application/reactflow", nodeType);
@@ -407,7 +348,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
   const handleNodeClick = (event: React.MouseEvent, node: Node) => {
     clearConnectedEdges();
     setSelectedNode(node);
-    const connectedEdges = getConnectedEdges([node], edges)
+    const connectedEdges = getConnectedEdges([node], edges);
     addConnectedEdges(connectedEdges);
   };
 
@@ -469,16 +410,15 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
         <Sidebar
           setupMode={setupMode}
           graphName={graphName}
-          isLoading={isLoading}
           graphDescription={graphDescription}
           selectedNode={selectedNode}
-          classes={classes}
           secondaryProperties={secondaryProperties}
           highlightedClass={highlightedClass}
           setHighlightedClass={setHighlightedClass}
           handleOnDrag={handleClassOnDrag}
           addToGraph={addToGraph}
           isEditable={isEditable}
+          nodeCatalog={nodeCatalog}
         />
 
         <section className={styles.graph__canvas}>
@@ -526,27 +466,35 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
                   fitViewOptions={{ maxZoom: 1 }}
                   onNodeClick={handleNodeClick}
                   // Doubleclick triggers single click aswell, so we only need to enter setup-mode
-                  onDoubleClick={doubleClickToEnterSetupMode ? () => setSetupMode(true) : null}
+                  onDoubleClick={
+                    doubleClickToEnterSetupMode
+                      ? () => setSetupMode(true)
+                      : null
+                  }
                   onNodeDragStart={handleNodeDragStart}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
                   nodesDraggable={isEditable}
                   nodesConnectable={isEditable}
                 >
-                  <Controls style={{ display: "flex" }} position="top-center" showInteractive={false}/>
+                  <Controls
+                    style={{ display: "flex" }}
+                    position="top-center"
+                    showInteractive={false}
+                  />
                   {/* @ts-ignore */}
                   <Background />
                 </ReactFlow>
                 {setupMode && selectedNode && (
                   <div className={styles.form}>
-                    <ClassForm
+                    {/* <ClassForm
                       key={selectedNode.id}
                       formData={selectedNode.data?.formData}
                       onSubmit={handleFormSubmit}
                       onClose={exitSetupMode}
                       className={selectedNode.data.label}
                       readOnly={!isEditable}
-                    />
+                    /> */}
                   </div>
                 )}
               </div>

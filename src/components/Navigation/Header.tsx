@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { usePathname } from 'next/navigation'
+import { usePathname } from "next/navigation";
 import { onOutsideClick } from "@/hooks/onOutsideClick";
 import CogWheel from "../../icons/CogWheel";
 import styles from "./Header.module.scss";
 
 const Header = () => {
   const { data: session } = useSession();
-  const pathname = usePathname()
+  const pathname = usePathname();
   const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
 
   const avatarDropdownRef = onOutsideClick(() => {
@@ -28,22 +28,33 @@ const Header = () => {
   return (
     <div className={styles.header}>
       <Link href="/" className={styles.header__title}>
-        {`SARAGRAPH ${
-          process.env.NEXT_PUBLIC_VERSION || ""
-        }`}
+        {`SARAFLOW ${process.env.NEXT_PUBLIC_VERSION || ""}`}
       </Link>
       <div className={styles.header__content}>
         {session && (
           <>
             <Link href="/settings">
-              <div className={`${styles.header__item} ${pathname === '/settings' ? `${styles.header__item__active}` : ''} `}>
+              <div
+                className={`${styles.header__item} ${
+                  pathname === "/settings"
+                    ? `${styles.header__item__active}`
+                    : ""
+                } `}
+              >
                 <div className={styles.header__item__iconSm}>
                   <CogWheel />
                 </div>
               </div>
             </Link>
             <div ref={avatarDropdownRef}>
-              <div className={`${styles.header__item}  ${isAvatarDropdownOpen ? `${styles.header__item__dropdown__active}` : ''} `} onClick={toggleMenu}>
+              <div
+                className={`${styles.header__item}  ${
+                  isAvatarDropdownOpen
+                    ? `${styles.header__item__dropdown__active}`
+                    : ""
+                } `}
+                onClick={toggleMenu}
+              >
                 <img
                   src="https://www.svgrepo.com/show/384676/account-avatar-profile-user-6.svg"
                   alt="User Avatar"

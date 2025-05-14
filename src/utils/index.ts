@@ -16,7 +16,7 @@ const JSON_LD_CONTEXT: ContextDefinition = {
   core: CORE_NS,
 };
 
-export const generateClassId = () => `iris:${crypto.randomUUID()}`;
+export const generateClassId = () => `${crypto.randomUUID()}`;
 
 interface IState {
   nodes: Node[];
@@ -156,7 +156,7 @@ export const isValidConnection = (nodes: Node[]) => (conn: Connection) => {
   const sourceNode = nodes.find((node) => node.id === conn.source);
   const targetNode = nodes.find((node) => node.id === conn.target);
   // Prevent self-connection
-  if(sourceNode === targetNode){
+  if (sourceNode === targetNode) {
     return;
   }
   const paths = getPaths({ sourceNode, targetNode });

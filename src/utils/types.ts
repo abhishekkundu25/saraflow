@@ -127,3 +127,40 @@ export interface Task {
 export interface TasksResponse {
   tasks: Task[];
 }
+
+export interface IoSpec {
+  in?: string;
+  out?: string;
+}
+
+export interface ConnectionSpec {
+  minInputs: number;
+  maxInputs: number | null;
+  minOutputs: number;
+  maxOutputs: number | null;
+}
+
+export interface JsonSchema {
+  // Simplified JSON Schema representation
+  type: string;
+  title?: string;
+  description?: string;
+  required?: string[];
+  properties?: Record<string, any>;
+  additionalProperties?: boolean | Record<string, any>;
+  oneOf?: Array<{ required: string[] }>;
+  items?: any;
+  default?: any;
+}
+
+export interface NodeCatalogEntry {
+  type: string;
+  category: string;
+  label: string;
+  icon: string;
+  io: IoSpec;
+  connections: ConnectionSpec;
+  configSchema: JsonSchema;
+  uiSchema?: Record<string, any>;
+  defaultConf: Record<string, any>;
+}
