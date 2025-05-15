@@ -1,9 +1,9 @@
 // components/DynamicNodeForm.tsx
-import { memo, useState } from "react";
+import React, { memo, useState } from "react";
+import Form from "@rjsf/core";
 import Validator from "@rjsf/validator-ajv8";
 import { Node } from "reactflow";
-import Form from "@rjsf/core";
-
+import styles from "./ofd.module.scss";
 import useOfdStore from "@/store/ofdStore";
 import { NodeCatalogEntry } from "@/utils/types";
 
@@ -27,18 +27,16 @@ function clean<T>(value: T): T {
 
 interface Props {
   node: Node | null;
-  /** called after user presses **Save** */
+  /** called when user clicks external Save */
   onSubmit: (conf: Record<string, any>) => void;
+  onClose: () => void;
 }
 
-const DynamicNodeForm = ({ node, onSubmit }: Props) => {
-  // 1. nothing selected → render nothing
+const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
   if (!node) return null;
 
-  // 2. catalogue lookup
   const catalog = useOfdStore((s) => s.catalog);
   const entry: NodeCatalogEntry | undefined = catalog[(node.data as any)?.type];
-
   if (!entry) {
     return (
       <p style={{ padding: 8, color: "red" }}>
@@ -47,35 +45,59 @@ const DynamicNodeForm = ({ node, onSubmit }: Props) => {
     );
   }
 
-  // 3. prepare schemas & initial data
   const schema = clean(entry.configSchema);
-  // const uiSchema = clean(entry.uiSchema ?? {});
   const uiSchema = {};
   const defaults = clean(entry.defaultConf ?? {});
   const current = clean((node.data as any)?.conf ?? {});
   const initial = { ...defaults, ...current };
 
-  // 4. keep local formData while user types
   const [formData, setFormData] = useState<Record<string, any>>(initial);
 
+  //  handle internal form submit
+  const handleFormSubmit = ({ formData }: { formData: any }) => {
+    onSubmit(formData);
+  };
+
   return (
-    <Form
-      schema={schema}
-      uiSchema={uiSchema}
-      formData={formData}
-      validator={Validator}
-      liveValidate
-      noHtml5Validate
-      onChange={({ formData }) => setFormData(formData)}
-      onSubmit={({ formData }) => onSubmit(formData)}
-      onError={(errs) => console.warn("form validation errors", errs)}
-    >
-      <div style={{ textAlign: "right", marginTop: 8 }}>
-        <button type="submit" className="tds-button tds-button--primary">
-          Save
-        </button>
+    <>
+      <div className={styles["form-header"]}>
+        <div className={styles.description}>
+          <p className="tds-detail-06">{entry.type}</p>
+        </div>
       </div>
-    </Form>
+      <article className={styles["form-body-section"]}>
+        <Form
+          schema={schema}
+          uiSchema={uiSchema}
+          formData={formData}
+          validator={Validator}
+          liveValidate
+          noHtml5Validate
+          onChange={({ formData }) => setFormData(formData)}
+          onSubmit={handleFormSubmit}
+          onError={(errs) => console.warn("form validation errors", errs)}
+        >
+          {/* no internal button */}
+          <></>
+        </Form>
+        <section className={styles["form__action-menu"]}>
+          <tds-button
+            type="button"
+            size="sm"
+            text="Save"
+            variant="primary"
+            onClick={() => onSubmit(formData)}
+          ></tds-button>
+          <tds-button
+            type="button"
+            size="sm"
+            variant="secondary"
+            text="Close"
+            onClick={onClose}
+          ></tds-button>
+        </section>
+      </article>
+    </>
   );
 };
 
