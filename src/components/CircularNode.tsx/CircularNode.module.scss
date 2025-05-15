@@ -41,8 +41,10 @@
   .headingContainer {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    // gap: 6px;
 
-    &__popover{
+    &__popover {
       margin-left: 10px;
       cursor: pointer;
     }
@@ -79,5 +81,11 @@
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .nodeIcon {
+    // flex: 0 0 auto; // ⬅ never shrink
+    // width: 18px; //   “Fi” icons are 24×24 by default;
+    // height: 18px; //   you can bump to 20 if you prefer
+    // color: #2b70d3; //   or whatever brand colour
   }
 }

@@ -37,6 +37,7 @@ import ActionToolbar from "@/components/ActionToolbar/ActionToolbar";
 import ConnectionLine from "@/components/ConnectionLine/ConnectionLine";
 import useOfdStore from "@/store/ofdStore";
 import userPreferencesStore from "@/store/userPreferencesStore"; // Import the Zustand store
+import { useConnectionValidator } from "@/hooks/useConnectionValidator";
 
 const edgeTypes = {
   "custom-edge": CustomEdge,
@@ -75,12 +76,14 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
   author,
   graphName,
   initEdges,
+  initNodes,
   isEditable = true,
   isDraftInitial = true,
 }) => {
   const reactFlowWrapper = useRef(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] =
+    useNodesState<FlowNodeData>(initNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges);
   const { showToast } = useToast();
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const selectedNode = useOfdStore((state) => state.selectedNode);
@@ -116,7 +119,11 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     y: 0,
   });
   const [isDraft, setIsDraft] = useState<boolean>(isDraftInitial);
-
+  const { validate, lastError, clearError } = useConnectionValidator(
+    catalog,
+    nodes,
+    edges
+  );
   useEffect(() => {
     fetch("http://localhost:3000/api/catalog/nodes")
       .then((res) => res.json())
@@ -222,7 +229,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
       setNodes((prevNodes) =>
         prevNodes.map((node: Node) =>
           node.id === selectedNode.id
-            ? { ...node, data: { ...node.data, formData: data } }
+            ? { ...node, data: { ...node.data, conf: data } }
             : node
         )
       );
@@ -340,11 +347,11 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
         position,
         data: {
           type: catalogEntry.type,
-          conf: {},
+          conf: { ...catalogEntry.defaultConf },
+          icon: catalogEntry.icon,
           label: catalogEntry.label,
         },
       };
-      console.log(nodes, "nodes");
       // 5. Append it to your nodes state
       setNodes((nds) => nds.concat(newNode));
     },
@@ -381,6 +388,13 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     if (!setupMode) {
       setSelectedNode(null);
     }
+  };
+  const onConnectStart = () => clearError();
+  const onConnectEnd = () => {
+    console.log(" end end");
+    const err = lastError();
+    console.log(err, "error");
+    if (err) showToast("error", "Invalid connection", err);
   };
 
   const handleExecute = () => {
@@ -474,7 +488,8 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   connectionLineComponent={ConnectionLine}
-                  isValidConnection={valFn}
+                  // isValidConnection={valFn}
+                  isValidConnection={validate}
                   onConnect={onConnect}
                   onInit={setReactFlowInstance}
                   onDrop={onDrop}
@@ -482,6 +497,8 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
                   fitView
                   fitViewOptions={{ maxZoom: 1 }}
                   onNodeClick={handleNodeClick}
+                  onConnectStart={onConnectStart}
+                  onConnectEnd={onConnectEnd}
                   // Doubleclick triggers single click aswell, so we only need to enter setup-mode
                   onDoubleClick={
                     doubleClickToEnterSetupMode
@@ -504,14 +521,14 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
                 </ReactFlow>
                 {setupMode && selectedNode && (
                   <div className={styles.form}>
-                    {/* <ClassForm
-                      key={selectedNode.id}
-                      formData={selectedNode.data?.formData}
+                    <ClassForm
+                      node={selectedNode}
+                      // formData={selectedNode.data?.formData}
                       onSubmit={handleFormSubmit}
                       onClose={exitSetupMode}
-                      className={selectedNode.data.label}
+                      className={selectedNode?.data.label}
                       readOnly={!isEditable}
-                    /> */}
+                    />
                   </div>
                 )}
               </div>

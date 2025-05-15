@@ -5,7 +5,6 @@ import Tab from "@/components/Tabs/Tab";
 import styles from "./Sidebar.module.scss";
 import ClassChip from "./ClassChip";
 import { NodeCatalogEntry } from "@/utils/types";
-
 type SidebarProps = {
   graphName: string;
   graphDescription: string;
@@ -67,14 +66,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {filtered
                   .filter((n) => n.category === cat || cat === "all")
                   .map((n) => (
-                    <ClassChip
-                      key={n.type}
-                      nodeType={n.type}
-                      highlightedClass={{ label: n.label, type: n.category }}
-                      setHighlightedClass={({ label }) => setHighlighted(label)}
-                      NodeLabel={n.label}
-                      handleOnDrag={handleOnDrag}
-                    />
+                    <>
+                      {" "}
+                      <ClassChip
+                        key={n.type}
+                        nodeType={n.type}
+                        highlightedClass={{ label: n.label, type: n.category }}
+                        setHighlightedClass={({ label }) =>
+                          setHighlighted(label)
+                        }
+                        NodeLabel={n.label}
+                        handleOnDrag={handleOnDrag}
+                        iconName={n.icon}
+                      />
+                    </>
                   ))}
               </div>
             </Tab>
