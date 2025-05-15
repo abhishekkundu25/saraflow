@@ -1,49 +1,86 @@
-import { create } from 'zustand';
+// store/ofdStore.ts
+import { create } from "zustand";
+import { NodeCatalogEntry } from "@/utils/types";
 
+// ------------------------------------------------------------------
+// Types
+// ------------------------------------------------------------------
 interface Edge {
   id: string;
 }
-
 interface Node {
   id: string;
   type: string;
 }
 
-// Define the store type for typescript linting
 interface OfdStore {
+  /* — graph-building state — */
   setupMode: boolean;
-  setSetupMode: (value: boolean) => void;
+  setSetupMode: (v: boolean) => void;
 
   connectedEdgesFromNode: Edge[];
-  addConnectedEdges: (edges: Edge | Edge[]) => void;
+  addConnectedEdges: (e: Edge | Edge[]) => void;
   clearConnectedEdges: () => void;
 
   selectedNode: Node | null;
-  setSelectedNode: (node: Node | null) => void;
+  setSelectedNode: (n: Node | null) => void;
 
   isGraphEditable: boolean;
-  setIsGraphEditable: (value: boolean) => void;
+  setIsGraphEditable: (v: boolean) => void;
+
+  /* — 🔽 NEW: catalog state — */
+  catalog: Record<string, NodeCatalogEntry>;
+  setCatalog: (entries: NodeCatalogEntry[]) => void;
+  getCatalogList: <K extends keyof NodeCatalogEntry = keyof NodeCatalogEntry>(
+    pickKeys?: K[]
+  ) => Pick<NodeCatalogEntry, K>[] | NodeCatalogEntry[];
 }
 
-const useOfdStore = create<OfdStore>((set) => ({
+// ------------------------------------------------------------------
+// Store
+// ------------------------------------------------------------------
+const useOfdStore = create<OfdStore>((set, get) => ({
+  /* graph state */
   setupMode: false,
-  setSetupMode: (value) => set({ setupMode: value }),
+  setSetupMode: (v) => set({ setupMode: v }),
 
   connectedEdgesFromNode: [],
-  addConnectedEdges: (edges) =>
-    set((state) => ({
+  addConnectedEdges: (e) =>
+    set((s) => ({
       connectedEdgesFromNode: [
-        ...state.connectedEdgesFromNode,
-        ...(Array.isArray(edges) ? edges : [edges]),
+        ...s.connectedEdgesFromNode,
+        ...(Array.isArray(e) ? e : [e]),
       ],
     })),
   clearConnectedEdges: () => set({ connectedEdgesFromNode: [] }),
 
   selectedNode: null,
-  setSelectedNode: (node) => set({ selectedNode: node }),
+  setSelectedNode: (n) => set({ selectedNode: n }),
 
   isGraphEditable: false,
-  setIsGraphEditable: (value) => set({ isGraphEditable: value }),
+  setIsGraphEditable: (v) => set({ isGraphEditable: v }),
+
+  /* catalog */
+  catalog: {},
+
+  setCatalog: (entries) =>
+    set({
+      catalog: Object.fromEntries(
+        entries.map((entry) => [entry.type, entry] as const)
+      ),
+    }),
+  getCatalogList: (pickKeys) => {
+    const all = Object.values(get().catalog);
+    if (!pickKeys) return all;
+
+    return all.map((entry) => {
+      const partial: Partial<NodeCatalogEntry> = {};
+      pickKeys.forEach((key) => {
+        partial[key] = entry[key];
+      });
+      return partial as Pick<NodeCatalogEntry, (typeof pickKeys)[number]>;
+    });
+  },
 }));
 
 export default useOfdStore;

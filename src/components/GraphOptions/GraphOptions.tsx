@@ -1,3 +1,4 @@
+import { TdsButton } from "@scania/tegel-react";
 import styles from "./graphOptions.module.scss";
 
 const GraphOptions = ({ selector, graphDescription, graphName, author }) => {
@@ -29,6 +30,23 @@ const GraphOptions = ({ selector, graphDescription, graphName, author }) => {
           disabled
           value={author?.email}
         ></tds-text-field>
+        <div style={{ marginTop: "28px" }} />
+        <span slot="actions">
+          <TdsButton
+            size="md"
+            text="Import DAG"
+            type="submit"
+            modeVariant="primary"
+          />
+
+          <TdsButton
+            size="md"
+            text="Export DAG"
+            type="submit"
+            modeVariant="primary"
+            style={{ marginLeft: "20px" }}
+          />
+        </span>
       </div>
       <span slot="actions"></span>
     </tds-modal>

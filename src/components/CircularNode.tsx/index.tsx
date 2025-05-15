@@ -27,7 +27,7 @@ export default memo((node) => {
   const isGraphEditable = useOfdStore((state) => state.isGraphEditable);
   const { data, isConnectable, type, id } = node;
   // const label = data?.formData.formFields[0]?.value;
-  const label = "tesrt";
+  const label = data?.type;
   const { deleteElements } = useReactFlow();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   // Store
@@ -45,7 +45,7 @@ export default memo((node) => {
   }, [deletePressed]);
 
   const deleteNode = () => {
-    if (node.data.label !== "Task" && isGraphEditable) {
+    if (isGraphEditable) {
       deleteElements({ nodes: [{ id }] });
       setSelectedNode(null);
       setSetupMode(false);
@@ -61,24 +61,12 @@ export default memo((node) => {
   return (
     <div
       className={`${node.id === selectedNode?.id ? styles.selected : ""} 
-        ${styles.container} ${
-        data.label === "Task"
-          ? styles.container__task
-          : isParameter(data.label)
-          ? styles.container__secondary
-          : styles.container__primary
-      }`}
+        ${styles.container} ${styles.container__secondary}`}
     >
       <div className={styles.headingContainer}>
         <div
           data-tooltip={label}
-          className={`${styles.chip} ${
-            data.label === "Task"
-              ? styles.chip__task
-              : isParameter(data.label)
-              ? styles.chip__secondary
-              : styles.chip__primary
-          }`}
+          className={`${styles.chip} ${styles.chip__secondary}`}
         >
           {data.label}
         </div>

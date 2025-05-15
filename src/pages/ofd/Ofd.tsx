@@ -1,4 +1,5 @@
 import { GraphBody } from "@/services/graphSchema";
+import { shallow } from "zustand/shallow";
 import {
   generateClassId,
   getPaths,
@@ -62,6 +63,11 @@ interface ForceGraphProps {
   isEditable?: boolean;
   isDraftInitial?: boolean;
 }
+interface FlowNodeData {
+  type: string;
+  conf: Record<string, any>;
+  formData?: Record<string, any>;
+}
 
 const ForceGraphComponent: React.FC<ForceGraphProps> = ({
   apiBaseUrl,
@@ -73,8 +79,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
   isDraftInitial = true,
 }) => {
   const reactFlowWrapper = useRef(null);
-  //@ts-ignore
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { showToast } = useToast();
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -98,7 +103,9 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
   );
   const isGraphEditable = useOfdStore((state) => state.isGraphEditable);
   const setIsGraphEditable = useOfdStore((state) => state.setIsGraphEditable);
-
+  const setCatalog = useOfdStore((s) => s.setCatalog);
+  const catalogList = useOfdStore.getState().getCatalogList();
+  const catalog = useOfdStore((s) => s.catalog, shallow);
   const [edgeSelections, setEdgeSelections] = useState<string[]>([]);
   const [connectionParams, setConnectionParams] = useState<
     Edge<any> | Connection | null
@@ -109,12 +116,11 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     y: 0,
   });
   const [isDraft, setIsDraft] = useState<boolean>(isDraftInitial);
-  const [nodeCatalog, setNodeCatalog] = useState<NodeCatalogEntry[]>([]);
 
   useEffect(() => {
     fetch("http://localhost:3000/api/catalog/nodes")
       .then((res) => res.json())
-      .then((data: NodeCatalogEntry[]) => setNodeCatalog(data))
+      .then((data: NodeCatalogEntry[]) => setCatalog(data))
       .catch(() => console.error("Failed to load catalog"));
   }, []);
   const resetEdgeSelection = () => {
@@ -137,21 +143,6 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     resetEdgeSelection();
   };
 
-  const secondaryProperties = useMemo(() => {
-    const cachedData = selectedNode?.data.formData?.objectProperties || [];
-    if (cachedData) {
-      // Process cachedData as needed, excluding connectors for main flow
-      return cachedData.filter(
-        (item: ObjectProperties) =>
-          ![
-            "https://kg.scania.com/it/iris_orchestration/hasAction",
-            "https://kg.scania.com/it/iris_orchestration/hasNextAction",
-          ].includes(item.path)
-      );
-    }
-    return [];
-  }, [selectedNode, setupMode]);
-
   const saveData = async (data: GraphBody) => {
     const response = await axios.post(`${apiBaseUrl}/api/persist`, data);
     return response.data;
@@ -173,7 +164,10 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
       showToast("error", "Error", "The graph could not be saved");
     },
   });
-
+  const valFn = useMemo(
+    () => isValidConnection(catalog, nodes, edges),
+    [catalog, nodes, edges]
+  );
   // TODO: more comprehensive shacl validation,
   // this only checks for at least one input Parameter,
   // without which leads to sdos error
@@ -244,23 +238,42 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
 
   const onConnect = useCallback(
     (params: Edge<any> | Connection) => {
-      const sourceNode = nodes.find((node) => node.id === params.source);
-      const targetNode = nodes.find((node) => node.id === params.target);
-      const paths = getPaths({ sourceNode, targetNode });
-      if (!paths.length) return;
-      if (paths.length === 1) {
-        return setEdges((eds) => {
-          const edge = addEdge(setEdgeProperties(params, paths[0]), eds);
-          return edge;
-        });
+      // 1. Find React Flow nodes
+      const sourceNode = nodes.find((n) => n.id === params.source);
+      const targetNode = nodes.find((n) => n.id === params.target);
+      if (!sourceNode || !targetNode) return;
+
+      // 2. Lookup catalog entries
+      const sourceEntry = catalog[sourceNode.data.type];
+      const targetEntry = catalog[targetNode.data.type];
+
+      // 3. Extract shapes (may be undefined)
+      const outShape = sourceEntry?.io.out;
+      const inShape = targetEntry?.io.in;
+
+      // 4. Determine final shape label
+      let shapeLabel: string;
+      if (outShape && outShape !== "any") {
+        shapeLabel = outShape;
+      } else if (inShape && inShape !== "any") {
+        shapeLabel = inShape;
+      } else {
+        shapeLabel = "any";
       }
-      setConnectionParams(params);
-      setEdgeSelections([...paths]);
-      setIsPopoverOpen(true);
-      captureCursorPosition(setTargetNodePosition);
-      return;
+
+      // 5. Add the edge with that label
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            type: "custom-edge",
+            label: shapeLabel,
+          },
+          eds
+        )
+      );
     },
-    [nodes]
+    [nodes, setEdges]
   );
 
   const addToGraph = () => {
@@ -302,9 +315,9 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
         x: event.clientX,
         y: event.clientY,
       });
-
+      // console.log(catalog, "catalog");
       // 3. Find the catalog entry for this type
-      const catalogEntry = nodeCatalog.find((n) => n.type === type);
+      const catalogEntry = catalog[type];
       if (!catalogEntry) {
         console.warn(`Dropped unknown node type: ${type}`);
         return;
@@ -325,13 +338,17 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
         id: generateClassId(),
         type: nodeTypeVisual(catalogEntry.io), // or use a custom nodeType if you have one per catalogEntry
         position,
-        data: { ...catalogEntry },
+        data: {
+          type: catalogEntry.type,
+          conf: {},
+          label: catalogEntry.label,
+        },
       };
       console.log(nodes, "nodes");
       // 5. Append it to your nodes state
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance, isEditable, nodeCatalog, setNodes]
+    [reactFlowInstance, isEditable, setNodes, catalog]
   );
   console.log(nodes, "nodes");
 
@@ -408,17 +425,17 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
       />
       <div className={styles.page__main}>
         <Sidebar
-          setupMode={setupMode}
+          // setupMode={setupMode}
           graphName={graphName}
           graphDescription={graphDescription}
           selectedNode={selectedNode}
-          secondaryProperties={secondaryProperties}
+          // secondaryProperties={secondaryProperties}
           highlightedClass={highlightedClass}
           setHighlightedClass={setHighlightedClass}
           handleOnDrag={handleClassOnDrag}
-          addToGraph={addToGraph}
-          isEditable={isEditable}
-          nodeCatalog={nodeCatalog}
+          // addToGraph={addToGraph}
+          // isEditable={isEditable}
+          nodeCatalog={catalogList}
         />
 
         <section className={styles.graph__canvas}>
@@ -457,7 +474,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   connectionLineComponent={ConnectionLine}
-                  isValidConnection={isValidConnection(nodes)}
+                  isValidConnection={valFn}
                   onConnect={onConnect}
                   onInit={setReactFlowInstance}
                   onDrop={onDrop}

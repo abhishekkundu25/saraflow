@@ -1,6 +1,11 @@
 import { ContextDefinition } from "jsonld/jsonld";
 import { Connection, Edge, Node } from "reactflow";
-import { FormField, IClassConfig, ObjectProperties } from "./types";
+import {
+  FormField,
+  IClassConfig,
+  NodeCatalogEntry,
+  ObjectProperties,
+} from "./types";
 
 const RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const OWL_NS = "http://www.w3.org/2002/07/owl#";
@@ -152,16 +157,56 @@ export const getPaths = ({
   return paths;
 };
 
-export const isValidConnection = (nodes: Node[]) => (conn: Connection) => {
-  const sourceNode = nodes.find((node) => node.id === conn.source);
-  const targetNode = nodes.find((node) => node.id === conn.target);
-  // Prevent self-connection
-  if (sourceNode === targetNode) {
-    return;
-  }
-  const paths = getPaths({ sourceNode, targetNode });
-  return paths.length > 0;
-};
+/**
+ * Make a connection–validator that React-Flow can consume.
+ *
+ * @param catalog  dictionary `entry.type  ->  NodeCatalogEntry`
+ * @param nodes    current node array
+ * @param edges    current edge array
+ *
+ * @returns  `(conn: Connection) => boolean`
+ */
+export const isValidConnection =
+  (catalog: Record<string, NodeCatalogEntry>, nodes: Node[], edges: Edge[]) =>
+  (conn: Connection): boolean => {
+    const src = nodes.find((n) => n.id === conn.source);
+    const dst = nodes.find((n) => n.id === conn.target);
+
+    /* ------------------------------------------------------------------ */
+    /* 0. Basic guards                                                    */
+    /* ------------------------------------------------------------------ */
+    if (!src || !dst) return false; // dangling end
+    if (src.id === dst.id) return false; // self-loop
+
+    const srcCat = catalog[src.data.type];
+    const dstCat = catalog[dst.data.type];
+    if (!srcCat || !dstCat) return false; // unknown node types
+
+    /* ------------------------------------------------------------------ */
+    /* 1. Shape compatibility                                             */
+    /* ------------------------------------------------------------------ */
+    const outShape = srcCat.io?.out ?? "any";
+    const inShape = dstCat.io?.in ?? "any";
+
+    if (outShape !== "any" && inShape !== "any" && outShape !== inShape) {
+      return false; // “table” → “rdf” etc.
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 2. Fan-out / fan-in limits                                         */
+    /* ------------------------------------------------------------------ */
+    const outgoing = edges.filter((e) => e.source === src.id).length;
+    const incoming = edges.filter((e) => e.target === dst.id).length;
+
+    const maxOut = srcCat.connections?.maxOutputs; // null ⇒ unlimited
+    const maxIn = dstCat.connections?.maxInputs;
+
+    if (maxOut != null && outgoing >= maxOut) return false;
+    if (maxIn != null && incoming >= maxIn) return false;
+
+    /* 3. All checks passed ✔️ */
+    return true;
+  };
 
 export const setEdgeProperties = (
   defaultParams: Edge<any> | Connection,
@@ -186,78 +231,3 @@ export const setEdgeProperties = (
   }
   return commonEdgeProps;
 };
-
-export const initializeNodes = () => [
-  {
-    id: generateClassId(),
-    type: "input",
-    data: {
-      label: "Task",
-      formData: {
-        className: "Task",
-        objectProperties: [
-          {
-            shape: "https://kg.scania.com/it/iris_orchestration/hasActionShape",
-            minCount: 1,
-            path: "https://kg.scania.com/it/iris_orchestration/hasAction",
-            className: "https://kg.scania.com/it/iris_orchestration/Action",
-            subClasses: [
-              "https://kg.scania.com/it/iris_orchestration/HTTPAction",
-              "https://kg.scania.com/it/iris_orchestration/ResultAction",
-              "https://kg.scania.com/it/iris_orchestration/SOAPAction",
-              "https://kg.scania.com/it/iris_orchestration/ScriptAction",
-              "https://kg.scania.com/it/iris_orchestration/SparqlConvertAction",
-              "https://kg.scania.com/it/iris_orchestration/VirtualGraphAction",
-            ],
-          },
-          {
-            shape:
-              "https://kg.scania.com/it/iris_orchestration/inputParameterShape_optional",
-            minCount: 0,
-            path: "https://kg.scania.com/it/iris_orchestration/inputParameter",
-            className: "https://kg.scania.com/it/iris_orchestration/Parameter",
-            subClasses: [
-              "https://kg.scania.com/it/iris_orchestration/BasicCredentialsParameter",
-              "https://kg.scania.com/it/iris_orchestration/HTTPParameter",
-              "https://kg.scania.com/it/iris_orchestration/StandardParameter",
-              "https://kg.scania.com/it/iris_orchestration/TokenCredentialsParameter",
-            ],
-          },
-          {
-            shape:
-              "https://kg.scania.com/it/iris_orchestration/hasMetadataShape",
-            path: "",
-            className: "",
-            subClasses: [],
-          },
-          {
-            shape:
-              "https://kg.scania.com/it/iris_orchestration/hasContextShape",
-            minCount: 0,
-            path: "https://kg.scania.com/it/iris_orchestration/hasContext",
-            className:
-              "https://kg.scania.com/it/iris_orchestration/JsonLdContext",
-            subClasses: [],
-            maxCount: 1,
-          },
-        ],
-        formFields: [
-          {
-            name: "http://www.w3.org/2000/01/rdf-schema#label",
-            type: "text",
-            label: "Label",
-            value: "Task",
-            validation: {
-              required: true,
-              minLength: 1,
-              maxLength: 50,
-              message: "Label must be a string with 1 to 50 characters",
-            },
-          },
-        ],
-      },
-    },
-    position: { x: 0, y: 0 },
-    sourcePosition: "right",
-  },
-];
