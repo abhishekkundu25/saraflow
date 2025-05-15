@@ -1,5 +1,5 @@
 // components/DynamicNodeForm.tsx
-import React, { memo, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import Form from "@rjsf/core";
 import Validator from "@rjsf/validator-ajv8";
 import { Node } from "reactflow";
@@ -57,6 +57,9 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
   const handleFormSubmit = ({ formData }: { formData: any }) => {
     onSubmit(formData);
   };
+  useEffect(() => {
+    setFormData(initial);
+  }, [node]);
 
   return (
     <>
