@@ -6,7 +6,7 @@ import { Node } from "reactflow";
 import styles from "./ofd.module.scss";
 import useOfdStore from "@/store/ofdStore";
 import { NodeCatalogEntry } from "@/utils/types";
-import { TdsTextarea, TdsTextField } from "@scania/tegel-react";
+import { rjsfTdsTheme } from "./DynamicFormWidgets";
 
 /**
  * Deep‑clone & strip null / undefined (RJSF dislikes them).
@@ -25,79 +25,13 @@ function clean<T>(value: T): T {
 }
 
 // ────────────────────────────────────────────────────────────
-// Custom widgets – wrap Tegel components for RJSF
-// ────────────────────────────────────────────────────────────
-const TextareaWidget = ({
-  id,
-  value,
-  required,
-  disabled,
-  placeholder,
-  label,
-  onChange,
-  onBlur,
-  onFocus,
-  rawErrors = [],
-}: WidgetProps) => {
-  const hasError = rawErrors.length > 0;
-  return (
-    <TdsTextarea
-      id={id}
-      className="tds-text-field"
-      label={label}
-      label-position="outside"
-      required={required}
-      disabled={disabled}
-      placeholder={placeholder}
-      state={hasError ? "error" : "default"}
-      helper={hasError ? rawErrors[0] : undefined}
-      value={value ?? ""}
-      onInput={(e: any) => onChange(e.target.value)}
-      onBlur={() => onBlur(id, value)}
-      onFocus={() => onFocus(id, value)}
-    />
-  );
-};
-
-const TextWidget = ({
-  id,
-  value,
-  required,
-  disabled,
-  placeholder,
-  label,
-  onChange,
-  onBlur,
-  onFocus,
-  rawErrors = [],
-}: WidgetProps) => {
-  const hasError = rawErrors.length > 0;
-  return (
-    <TdsTextField
-      id={id}
-      className="tds-text-field"
-      label={label}
-      label-position="outside"
-      required={required}
-      disabled={disabled}
-      placeholder={placeholder}
-      state={hasError ? "error" : "default"}
-      helper={hasError ? rawErrors[0] : undefined}
-      value={value ?? ""}
-      onInput={(e: any) => onChange(e.target.value)}
-      onBlur={() => onBlur(id, value)}
-      onFocus={() => onFocus(id, value)}
-    />
-  );
-};
-
 // Register widgets with RJSF
-const widgets = {
-  TextareaWidget,
-  TextWidget,
-  textarea: TextareaWidget,
-  text: TextWidget,
-};
+// const widgets = {
+//   TextareaWidget,
+//   TextWidget,
+//   textarea: TextareaWidget,
+//   text: TextWidget,
+// };
 
 // ────────────────────────────────────────────────────────────
 // Suppress RJSF's default labels
@@ -155,14 +89,16 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         uiSchema={uiSchema}
         formData={formData}
         validator={Validator}
-        widgets={widgets}
-        templates={{ FieldTemplate }}
+        // widgets={widgets}
+        // templates={{ FieldTemplate }}
         validationMode="onSubmit"
-        noHtml5Validate
+        // liveValidate
+        // noHtml5Validate
         className={styles.rjsfForm}
         onChange={({ formData }) => setFormData(formData)}
         onSubmit={({ formData }) => onSubmit(formData)}
         onError={(errs) => console.warn("form validation errors", errs)}
+        {...rjsfTdsTheme}
       >
         <></>
       </Form>
