@@ -1,6 +1,6 @@
 // components/DynamicNodeForm.tsx
 import React, { memo, useEffect, useState } from "react";
-import Form, { WidgetProps } from "@rjsf/core";
+import Form, { FieldTemplateProps, WidgetProps } from "@rjsf/core";
 import Validator from "@rjsf/validator-ajv8";
 import { Node } from "reactflow";
 import styles from "./ofd.module.scss";
@@ -13,10 +13,7 @@ import { TdsTextarea, TdsTextField } from "@scania/tegel-react";
  */
 function clean<T>(value: T): T {
   if (value === null || value === undefined) return {} as T;
-  if (Array.isArray(value))
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore – TS can’t infer this map
-    return value.map((v) => clean(v));
+  if (Array.isArray(value)) return value.map((v) => clean(v)) as unknown as T;
   if (typeof value === "object") {
     const out: Record<string, any> = {};
     for (const [k, v] of Object.entries(value)) {
@@ -43,7 +40,6 @@ const TextareaWidget = ({
   rawErrors = [],
 }: WidgetProps) => {
   const hasError = rawErrors.length > 0;
-
   return (
     <TdsTextarea
       id={id}
@@ -76,7 +72,6 @@ const TextWidget = ({
   rawErrors = [],
 }: WidgetProps) => {
   const hasError = rawErrors.length > 0;
-
   return (
     <TdsTextField
       id={id}
@@ -98,13 +93,18 @@ const TextWidget = ({
 
 // Register widgets with RJSF
 const widgets = {
-  TextareaWidget, // explicit override when uiSchema { "ui:widget": "TextareaWidget" }
-  TextWidget, // default for string fields
-  textarea: TextareaWidget, // allow shorthand
+  TextareaWidget,
+  TextWidget,
+  textarea: TextareaWidget,
   text: TextWidget,
 };
 
 // ────────────────────────────────────────────────────────────
+// Suppress RJSF's default labels
+const FieldTemplate = ({ children }: FieldTemplateProps) => (
+  <div>{children}</div>
+);
+
 interface Props {
   node: Node | null;
   /** called when user presses the **Save** button */
@@ -116,13 +116,10 @@ interface Props {
  * Dynamic form driven by the JSON‑schema in the node‑catalog using Tegel UI.
  */
 const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
-  // ───────── early‑exit ─────────────────────────────────────
   if (!node) return null;
 
-  // ───────── catalogue lookup ───────────────────────────────
   const catalog = useOfdStore((s) => s.catalog);
   const entry: NodeCatalogEntry | undefined = catalog[(node.data as any)?.type];
-
   if (!entry) {
     return (
       <p style={{ padding: 8, color: "red" }}>
@@ -131,24 +128,19 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
     );
   }
 
-  // ───────── prepare schema & initial data ─────────────────
   const schema = clean(entry.configSchema);
   const uiSchema = clean(entry.uiSchema ?? {});
   const defaults = clean(entry.defaultConf ?? {});
   const current = clean((node.data as any)?.conf ?? {});
   const initial = { ...defaults, ...current };
 
-  // ───────── local form state – reset when node changes ─────
   const [formData, setFormData] = useState<Record<string, any>>(initial);
   useEffect(() => {
     setFormData(initial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node]);
 
-  // ───────── render ─────────────────────────────────────────
   return (
     <div className={styles.formWrapper}>
-      {/* ───── header */}
       <header className={styles.formHeader}>
         <h4 className="tds-headline-05" title={entry.label || entry.type}>
           {entry.label || entry.type}
@@ -158,25 +150,23 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         </p>
       </header>
 
-      {/* ───── body */}
       <Form
         schema={schema}
         uiSchema={uiSchema}
         formData={formData}
         validator={Validator}
         widgets={widgets}
-        liveValidate
+        templates={{ FieldTemplate }}
+        validationMode="onSubmit"
         noHtml5Validate
         className={styles.rjsfForm}
         onChange={({ formData }) => setFormData(formData)}
         onSubmit={({ formData }) => onSubmit(formData)}
         onError={(errs) => console.warn("form validation errors", errs)}
       >
-        {/* internal buttons hidden – we use external action‑bar */}
         <></>
       </Form>
 
-      {/* ───── actions */}
       <footer className={styles.formActions}>
         <tds-button
           type="button"
