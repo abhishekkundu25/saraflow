@@ -91,7 +91,7 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         validator={Validator}
         // widgets={widgets}
         // templates={{ FieldTemplate }}
-        validationMode="onSubmit"
+        // validationMode="onSubmit"
         // liveValidate
         // noHtml5Validate
         className={styles.rjsfForm}
@@ -100,25 +100,17 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         onError={(errs) => console.warn("form validation errors", errs)}
         {...rjsfTdsTheme}
       >
-        <></>
+        <footer className={styles.formActions}>
+          <tds-button type="submit" size="sm" variant="primary" text="Save" />
+          <tds-button
+            type="button"
+            size="sm"
+            variant="secondary"
+            text="Close"
+            onClick={onClose}
+          />
+        </footer>
       </Form>
-
-      <footer className={styles.formActions}>
-        <tds-button
-          type="button"
-          size="sm"
-          text="Save"
-          variant="primary"
-          onClick={() => onSubmit(formData)}
-        />
-        <tds-button
-          type="button"
-          size="sm"
-          variant="secondary"
-          text="Close"
-          onClick={onClose}
-        />
-      </footer>
     </div>
   );
 };

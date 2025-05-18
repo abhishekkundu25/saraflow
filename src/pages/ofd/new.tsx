@@ -66,7 +66,7 @@ export async function getServerSideProps(context: any) {
       apiBaseUrl: baseUrl,
       graphName: name,
       description: description || "",
-      initNodes: initializeNodes(),
+      initNodes: [],
     },
   };
 }
