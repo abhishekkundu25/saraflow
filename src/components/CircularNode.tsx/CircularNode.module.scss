@@ -69,7 +69,14 @@
       background: #2b70d3;
       color: white;
     }
-
+    &__input {
+      background: rgba(91, 213, 176, 0.4); /* blue 40 % */
+      color: black;
+    }
+    &__output {
+      background: rgba(164, 94, 229, 0.4); /* purple 40 % */
+      color: black;
+    }
     &__secondary {
       background: #bacde8;
       color: black;

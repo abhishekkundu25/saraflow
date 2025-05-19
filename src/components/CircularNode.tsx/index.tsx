@@ -23,6 +23,13 @@ export default memo((node) => {
     (state) => state.connectedEdgesFromNode
   );
 
+  /* optional: coloured chip -------------------------------------------- */
+  const chipColourClass =
+    type === "input"
+      ? styles.chip__input
+      : type === "output"
+      ? styles.chip__output
+      : styles.chip__secondary;
   useEffect(() => {
     if (deletePressed && node.id === selectedNode?.id) {
       deleteNode();
@@ -46,12 +53,12 @@ export default memo((node) => {
   return (
     <div
       className={`${node.id === selectedNode?.id ? styles.selected : ""} 
-        ${styles.container} ${styles.container__secondary}`}
+        ${styles.container} ${styles.container__secondary} `}
     >
       <div className={styles.headingContainer}>
         <div
           data-tooltip={label}
-          className={`${styles.chip} ${styles.chip__secondary}`}
+          className={`${styles.chip} ${chipColourClass}`}
         >
           {data.label}
         </div>
