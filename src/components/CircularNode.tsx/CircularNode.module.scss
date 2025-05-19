@@ -1,6 +1,12 @@
+/* ------------------------------------------------------------------
+   CircularNode.module.scss
+   ------------------------------------------------------------------ */
+
 .container {
   padding: 8px 8px 8px 16px;
   border-radius: 4px;
+
+  /* ───────────── CARD VARIANTS ───────────── */
 
   &__task {
     background: #2b70d3;
@@ -10,7 +16,12 @@
     width: 300px;
 
     &.selected {
-      box-shadow: 0px 0px 0px 2px #4a89f3;
+      box-shadow: 0 0 0 2px #4a89f3;
+    }
+
+    /* dark-mode override */
+    :global(.tds-mode-dark) & {
+      background: #2258ad;
     }
   }
 
@@ -22,7 +33,12 @@
     width: 300px;
 
     &.selected {
-      box-shadow: 0px 0px 0px 2px #2b70d3;
+      box-shadow: 0 0 0 2px #2b70d3;
+    }
+
+    :global(.tds-mode-dark) & {
+      background: #2d3645;
+      color: #ffffff;
     }
   }
 
@@ -34,22 +50,33 @@
     width: 300px;
 
     &.selected {
-      box-shadow: 0px 0px 0px 2px #2b70d3;
+      box-shadow: 0 0 0 2px #2b70d3;
+    }
+
+    :global(.tds-mode-dark) & {
+      background: #2d3645;
+      color: #ffffff;
     }
   }
 
+  /* ───────────── HEADER / POPOVER ───────────── */
   .headingContainer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    // gap: 6px;
 
     &__popover {
       margin-left: 10px;
       cursor: pointer;
+
+      /* tint icon in dark theme */
+      :global(.tds-mode-dark) & {
+        color: #d1d5db;
+      }
     }
   }
 
+  /* ───────────── CHIP VARIANTS ───────────── */
   .chip {
     font-size: 14px;
     width: initial;
@@ -63,36 +90,58 @@
     &__task {
       background: white;
       color: initial;
+
+      :global(.tds-mode-dark) & {
+        background: #2b70d3;
+        color: #ffffff;
+      }
     }
 
     &__primary {
       background: #2b70d3;
-      color: white;
+      color: white; /* OK in dark mode as-is */
     }
+
     &__input {
-      background: rgba(91, 213, 176, 0.4); /* blue 40 % */
+      background: rgba(91, 213, 176, 0.4);
       color: black;
+
+      :global(.tds-mode-dark) & {
+        background: rgba(91, 213, 176, 0.3);
+        color: #ffffff;
+      }
     }
+
     &__output {
-      background: rgba(164, 94, 229, 0.4); /* purple 40 % */
+      background: rgba(164, 94, 229, 0.4);
       color: black;
+
+      :global(.tds-mode-dark) & {
+        background: rgba(164, 94, 229, 0.3);
+        color: #ffffff;
+      }
     }
+
     &__secondary {
       background: #bacde8;
       color: black;
+
+      :global(.tds-mode-dark) & {
+        background: rgba(186, 205, 232, 0.25);
+        color: #ffffff;
+      }
     }
   }
 
+  /* ───────────── LABEL ───────────── */
   .labelContainer {
     font-size: 16px;
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .nodeIcon {
-    // flex: 0 0 auto; // ⬅ never shrink
-    // width: 18px; //   “Fi” icons are 24×24 by default;
-    // height: 18px; //   you can bump to 20 if you prefer
-    // color: #2b70d3; //   or whatever brand colour
+
+    :global(.tds-mode-dark) & {
+      color: #ffffff;
+    }
   }
 }
