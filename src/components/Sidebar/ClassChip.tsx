@@ -58,7 +58,9 @@ const ClassChip: React.FC<ClassChipProps> = ({
             {NodeLabel}
           </span>
         </div>
-        <CatalogIcon name={iconName} />
+        <div className={styles.classChipIcon}>
+          <CatalogIcon name={iconName} />
+        </div>
       </div>
     </div>
   );

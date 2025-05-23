@@ -216,7 +216,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     const payload = {
       nodes,
       edges,
-      graphName: `https://kg.scania.com/iris_orchestration/${graphName}`,
+      graphName: `${graphName}`,
       description: graphDescription,
       isDraft: isDraftSave,
     };
@@ -414,12 +414,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
         return;
       }
 
-      const firstNodeId = nodes[0].id;
-      const iri = `https://kg.scania.com/it/iris_orchestration/${firstNodeId
-        .split(":")
-        .pop()}`;
-
-      router.push(`/executeFlow/iri/${encodeURIComponent(iri)}`);
+      router.push(`/executeFlow/iri/${encodeURIComponent(graphName)}`);
     }
   };
 

@@ -11,11 +11,7 @@ import Modal from "@/components/Modal/CustomModal";
 import styles from "./landing.module.scss";
 import Tabs from "@/components/Tabs/Tabs";
 import Tab from "@/components/Tabs/Tab";
-import {
-  TdsButton,
-  TdsTextField,
-  TdsTextarea,
-} from "@scania/tegel-react";
+import { TdsButton, TdsTextField, TdsTextarea } from "@scania/tegel-react";
 import TaskSelection from "@/components/TaskSelection";
 import { Task } from "@/utils/types";
 import Introduction from "@/components/homepage/IntroductionContent";
@@ -134,9 +130,7 @@ function App({
   const checkNameExists = async (name: string): Promise<boolean> => {
     try {
       const response = await axios.get(
-        `${baseUrl}/api/flow/name-exists/${encodeURIComponent(
-          `https://kg.scania.com/iris_orchestration/${name}`
-        )}`
+        `${baseUrl}/api/flow/name-exists/${encodeURIComponent(`${name}`)}`
       );
       return response.data;
     } catch (error) {
@@ -224,11 +218,11 @@ function App({
             </Tab>
             <Tab label="Other flows" tabKey="Other flows">
               <Introduction
-                  heading={"Other flows"}
-                  description={
-                    "View graphs available to you from other projects."
-                  }
-                />
+                heading={"Other flows"}
+                description={
+                  "View graphs available to you from other projects."
+                }
+              />
             </Tab>
           </Tabs>
         </div>
@@ -254,51 +248,52 @@ function App({
                 <tds-icon size="16px" slot="icon" name="send"></tds-icon>
               </tds-button>
               <Modal
-              isOpen={isCreateGraphModalOpen}
-              onRequestClose={() => {
-                setValue("name", "");
-                setValue("description", "");
-                setIsCreateGraphModalOpen(false); 
-                clearErrors("name")}}
-              title="Create graph"
-              width={"md"}>
+                isOpen={isCreateGraphModalOpen}
+                onRequestClose={() => {
+                  setValue("name", "");
+                  setValue("description", "");
+                  setIsCreateGraphModalOpen(false);
+                  clearErrors("name");
+                }}
+                title="Create graph"
+                width={"md"}
+              >
                 <form onSubmit={handleSubmit(createNewGraph)}>
-                    <TdsTextField
-                      id="modal-name-field"
-                      placeholder="Name"
-                      size="sm"
-                      mode-variant={theme === "light" ? "primary" : "secondary"}
-                      helper={errors.name ? errors.name.message : ""}
-                      value={watch("name") || ""}
-                      state={errors.name ? "error" : "default"}
-                      {...register("name", {
-                        required: "Graph name is required",
-                        pattern: {
-                          value: /^[a-zA-Z0-9\s]+$/,
-                          message:
-                            "Graph name cannot contain special characters",
-                        },
-                      })}
+                  <TdsTextField
+                    id="modal-name-field"
+                    placeholder="Name"
+                    size="sm"
+                    mode-variant={theme === "light" ? "primary" : "secondary"}
+                    helper={errors.name ? errors.name.message : ""}
+                    value={watch("name") || ""}
+                    state={errors.name ? "error" : "default"}
+                    {...register("name", {
+                      required: "Graph name is required",
+                      pattern: {
+                        value: /^[a-zA-Z0-9\s]+$/,
+                        message: "Graph name cannot contain special characters",
+                      },
+                    })}
+                  />
+                  <div style={{ marginTop: "28px" }} />
+                  <TdsTextarea
+                    id="modal-description-area"
+                    placeholder="Description"
+                    rows={4}
+                    value={watch("description") || ""}
+                    mode-variant={theme === "light" ? "primary" : "secondary"}
+                    {...register("description")}
+                  />
+                  <div style={{ marginTop: "28px" }} />
+                  <span slot="actions">
+                    <TdsButton
+                      size="md"
+                      text="Create"
+                      type="submit"
+                      modeVariant="primary"
                     />
-                    <div style={{ marginTop: "28px" }} />
-                    <TdsTextarea
-                      id="modal-description-area"
-                      placeholder="Description"
-                      rows={4}
-                      value={watch("description") || ""}
-                      mode-variant={theme === "light" ? "primary" : "secondary"}
-                      {...register("description")}
-                    />
-                    <div style={{ marginTop: "28px" }} />
-                    <span slot="actions">
-                      <TdsButton
-                        size="md"
-                        text="Create"
-                        type="submit"
-                        modeVariant="primary"
-                      />
-                    </span>
-                  </form>
+                  </span>
+                </form>
               </Modal>
               {/* Execute Graph Modal */}
               <TaskSelection

@@ -25,7 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   nodeCatalog,
 }) => {
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<string>("source");
+  const [activeTab, setActiveTab] = useState<string>("Source");
 
   // Fetch catalog entries directly from Next.js API route
   console.log(nodeCatalog);

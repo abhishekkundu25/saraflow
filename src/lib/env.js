@@ -17,6 +17,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
   TEST_BASE_URL: z.string().url().optional(),
   ADMIN_EMAILS: z.string().optional(),
+  ETL_SERVICE_URL: z.string().url().min(1),
 });
 
 //This will make all env vars optional

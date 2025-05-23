@@ -30,9 +30,7 @@ export async function getServerSideProps(context: any) {
 
   if (bypassCheck !== "true") {
     try {
-      const encodedName = encodeURIComponent(
-        `https://kg.scania.com/iris_orchestration/${name}`
-      );
+      const encodedName = encodeURIComponent(`${name}`);
       const response = await axios.get(
         `${baseUrl}/api/flow/name-exists/${encodedName}`,
         {
@@ -67,6 +65,7 @@ export async function getServerSideProps(context: any) {
       graphName: name,
       description: description || "",
       initNodes: [],
+      initEdges: [],
     },
   };
 }

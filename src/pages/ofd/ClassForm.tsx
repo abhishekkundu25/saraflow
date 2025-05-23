@@ -64,15 +64,20 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
 
   const schema = clean(entry.configSchema);
   const uiSchema = clean(entry.uiSchema ?? {});
-  const defaults = clean(entry.defaultConf ?? {});
-  const current = clean((node.data as any)?.conf ?? {});
-  const initial = { ...defaults, ...current };
+  function makeInitialData(n: Node | null) {
+    if (!n) return {};
+    const entry = catalog[n.data.type];
+    const defaults = entry?.defaultConf ?? {};
+    const current = n.data.conf ?? {};
+    return { ...defaults, ...current };
+  }
 
-  const [formData, setFormData] = useState<Record<string, any>>(initial);
+  const [formData, setFormData] = useState<Record<string, any>>(
+    makeInitialData(node)
+  );
   useEffect(() => {
-    setFormData(initial);
-  }, [node]);
-
+    setFormData(makeInitialData(node));
+  }, [node?.id]);
   return (
     <div className={styles.formWrapper}>
       <header className={styles.formHeader}>
@@ -85,6 +90,7 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
       </header>
 
       <Form
+        key={node.id}
         schema={schema}
         uiSchema={uiSchema}
         formData={formData}
@@ -93,7 +99,7 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         // templates={{ FieldTemplate }}
         // validationMode="onSubmit"
         // liveValidate
-        // noHtml5Validate
+        noHtml5Validate
         className={styles.rjsfForm}
         onChange={({ formData }) => setFormData(formData)}
         onSubmit={({ formData }) => onSubmit(formData)}
@@ -115,4 +121,4 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
   );
 };
 
-export default memo(DynamicNodeForm);
+export default DynamicNodeForm;
