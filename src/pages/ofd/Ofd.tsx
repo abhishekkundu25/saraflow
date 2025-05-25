@@ -38,6 +38,7 @@ import ConnectionLine from "@/components/ConnectionLine/ConnectionLine";
 import useOfdStore from "@/store/ofdStore";
 import userPreferencesStore from "@/store/userPreferencesStore"; // Import the Zustand store
 import { useConnectionValidator } from "@/hooks/useConnectionValidator";
+import { validateGraph } from "@/helpers/validateGraph";
 
 const edgeTypes = {
   "custom-edge": CustomEdge,
@@ -124,6 +125,7 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     nodes,
     edges
   );
+  const { setErrorMap } = useOfdStore.getState();
   useEffect(() => {
     fetch("http://localhost:3000/api/catalog/nodes")
       .then((res) => res.json())
@@ -205,11 +207,19 @@ const ForceGraphComponent: React.FC<ForceGraphProps> = ({
     if (!graphName) {
       showToast("error", "Validation Error", "Graph Name should be set");
     }
-    if (!isGraphValid(nodes, edges) && !isDraftSave) {
+    const errorMap = validateGraph(nodes, catalog);
+    let isValidationError = false;
+    if (Object.keys(errorMap).length > 0) {
+      setErrorMap(errorMap);
+      isValidationError = true;
+    }
+
+    console.log(errorMap, "errroMap");
+    if (isValidationError && !isDraftSave) {
       showToast(
         "error",
         "Validation Error",
-        "Task node must be connected to at least one input Parameter."
+        "Some nodes have invalid or incomplete configuration."
       );
       return;
     }

@@ -22,14 +22,19 @@ export default memo((node) => {
   const connectedEdgesFromNode = useOfdStore(
     (state) => state.connectedEdgesFromNode
   );
+  /*  does this node have validation errors? */
+  const hasErrors = useOfdStore(
+    (state) => !!state.errorMap[id] && state.errorMap[id].length > 0
+  );
 
   /* optional: coloured chip -------------------------------------------- */
-  const chipColourClass =
-    type === "input"
-      ? styles.chip__input
-      : type === "output"
-      ? styles.chip__output
-      : styles.chip__secondary;
+  const chipColourClass = hasErrors
+    ? styles.chip__error
+    : type === "input"
+    ? styles.chip__input
+    : type === "output"
+    ? styles.chip__output
+    : styles.chip__secondary;
   useEffect(() => {
     if (deletePressed && node.id === selectedNode?.id) {
       deleteNode();
@@ -52,8 +57,14 @@ export default memo((node) => {
 
   return (
     <div
-      className={`${node.id === selectedNode?.id ? styles.selected : ""} 
-        ${styles.container} ${styles.container__secondary} `}
+      className={[
+        styles.container,
+        styles.container__secondary,
+        node.id === selectedNode?.id && styles.selected,
+        hasErrors && styles.error /* 🆕 red outline */,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div className={styles.headingContainer}>
         <div

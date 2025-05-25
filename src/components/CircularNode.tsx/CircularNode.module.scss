@@ -5,6 +5,9 @@
 .container {
   padding: 8px 8px 8px 16px;
   border-radius: 4px;
+  &.error {
+    box-shadow: 0 0 0 2px #e53935;
+  }
 
   /* ───────────── CARD VARIANTS ───────────── */
 
@@ -86,7 +89,15 @@
     display: inline-block;
     overflow: hidden;
     text-overflow: ellipsis;
+    &__error {
+      background: rgba(229, 57, 53, 0.25);
+      color: black;
 
+      :global(.tds-mode-dark) & {
+        background: rgba(229, 57, 53, 0.35);
+        color: #ffffff;
+      }
+    }
     &__task {
       background: white;
       color: initial;

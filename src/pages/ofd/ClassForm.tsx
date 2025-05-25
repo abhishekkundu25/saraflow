@@ -78,6 +78,8 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
   if (!node) return null;
 
   const catalog = useOfdStore((s) => s.catalog);
+  const errorMap = useOfdStore((s) => s.errorMap);
+  const liveValidate = Boolean(errorMap[node?.id || ""]?.length);
   const [formData, setFormData] = useState<Record<string, any>>(
     makeInitialData(node)
   );
@@ -123,7 +125,7 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         // widgets={widgets}
         // templates={{ FieldTemplate }}
         // validationMode="onSubmit"
-        // liveValidate
+        liveValidate={liveValidate}
         noHtml5Validate
         className={styles.rjsfForm}
         onChange={({ formData }) => setFormData(stripEmptyStrings(formData))}

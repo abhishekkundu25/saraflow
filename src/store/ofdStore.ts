@@ -1,7 +1,7 @@
 // store/ofdStore.ts
 import { create } from "zustand";
 import { NodeCatalogEntry } from "@/utils/types";
-
+import type { ErrorObject } from "ajv";
 // ------------------------------------------------------------------
 // Types
 // ------------------------------------------------------------------
@@ -12,7 +12,7 @@ interface Node {
   id: string;
   type: string;
 }
-
+export type ErrorMap = Record<string, ErrorObject[]>;
 interface OfdStore {
   /* — graph-building state — */
   setupMode: boolean;
@@ -34,6 +34,9 @@ interface OfdStore {
   getCatalogList: <K extends keyof NodeCatalogEntry = keyof NodeCatalogEntry>(
     pickKeys?: K[]
   ) => Pick<NodeCatalogEntry, K>[] | NodeCatalogEntry[];
+  errorMap: ErrorMap;
+  setErrorMap: (map: ErrorMap) => void;
+  clearErrorMap: () => void;
 }
 
 // ------------------------------------------------------------------
@@ -81,6 +84,9 @@ const useOfdStore = create<OfdStore>((set, get) => ({
       return partial as Pick<NodeCatalogEntry, (typeof pickKeys)[number]>;
     });
   },
+  errorMap: {}, // ⬅️ NEW
+  setErrorMap: (map) => set({ errorMap: map }), // ⬅️ NEW
+  clearErrorMap: () => set({ errorMap: {} }),
 }));
 
 export default useOfdStore;
