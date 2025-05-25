@@ -23,6 +23,31 @@ function clean<T>(value: T): T {
   }
   return value;
 }
+/**
+ * Recursively drop keys whose value is an empty string ("", "   ", "\n").
+ * Arrays and non-string primitives are left untouched.
+ */
+function stripEmptyStrings<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(stripEmptyStrings) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      const cleaned = stripEmptyStrings(v);
+      const isBlank =
+        typeof cleaned === "string" && cleaned.trim().length === 0;
+      const isEmptyObject =
+        cleaned &&
+        typeof cleaned === "object" &&
+        !Array.isArray(cleaned) &&
+        Object.keys(cleaned).length === 0;
+      if (!isBlank && !isEmptyObject) out[k] = cleaned;
+    }
+    return out as T;
+  }
+  return value;
+}
 
 // ────────────────────────────────────────────────────────────
 // Register widgets with RJSF
@@ -53,6 +78,12 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
   if (!node) return null;
 
   const catalog = useOfdStore((s) => s.catalog);
+  const [formData, setFormData] = useState<Record<string, any>>(
+    makeInitialData(node)
+  );
+  useEffect(() => {
+    setFormData(makeInitialData(node));
+  }, [node?.id]);
   const entry: NodeCatalogEntry | undefined = catalog[(node.data as any)?.type];
   if (!entry) {
     return (
@@ -72,12 +103,6 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
     return { ...defaults, ...current };
   }
 
-  const [formData, setFormData] = useState<Record<string, any>>(
-    makeInitialData(node)
-  );
-  useEffect(() => {
-    setFormData(makeInitialData(node));
-  }, [node?.id]);
   return (
     <div className={styles.formWrapper}>
       <header className={styles.formHeader}>
@@ -101,8 +126,8 @@ const DynamicNodeForm = ({ node, onSubmit, onClose }: Props) => {
         // liveValidate
         noHtml5Validate
         className={styles.rjsfForm}
-        onChange={({ formData }) => setFormData(formData)}
-        onSubmit={({ formData }) => onSubmit(formData)}
+        onChange={({ formData }) => setFormData(stripEmptyStrings(formData))}
+        onSubmit={({ formData }) => onSubmit(stripEmptyStrings(formData))}
         onError={(errs) => console.warn("form validation errors", errs)}
         {...rjsfTdsTheme}
       >
